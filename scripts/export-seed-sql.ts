@@ -8,30 +8,40 @@ const db = new Database(dbPath)
 console.log('Exporting SQLite records to seed.sql for Cloudflare D1...')
 
 const rows = db.query('SELECT narrator, number, arab, translation FROM hadiths ORDER BY id ASC').all() as Array<{
-  narrator: string
-  number: number
-  arab: string
-  translation: string
+	narrator: string
+	number: number
+	arab: string
+	translation: string
 }>
 
 console.log(`Read ${rows.length.toLocaleString('id-ID')} rows from SQLite.`)
 
 function escapeSql(str: string): string {
-  return str.replace(/'/g, '\'\'')
+	return str.replace(/'/g, '\'\'')
 }
 
 const batchSize = 100
 const chunks: string[] = []
 
-chunks.push('-- Kutubut Tis\'ah Seed Data for Cloudflare D1\n')
+chunks.push(`-- Kutubut Tis'ah D1 Schema and Seed Data
+CREATE TABLE IF NOT EXISTS hadiths (
+	id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	narrator text NOT NULL,
+	number integer NOT NULL,
+	arab text NOT NULL,
+	translation text NOT NULL
+);
+CREATE INDEX IF NOT EXISTS narrator_idx ON hadiths (narrator);
+CREATE INDEX IF NOT EXISTS narrator_number_idx ON hadiths (narrator, number);
+`)
 
 for (let i = 0; i < rows.length; i += batchSize) {
-  const slice = rows.slice(i, i + batchSize)
-  const values = slice
-    .map(r => `('${escapeSql(r.narrator)}', ${r.number}, '${escapeSql(r.arab)}', '${escapeSql(r.translation)}')`)
-    .join(',\n')
+	const slice = rows.slice(i, i + batchSize)
+	const values = slice
+		.map(r => `('${escapeSql(r.narrator)}', ${r.number}, '${escapeSql(r.arab)}', '${escapeSql(r.translation)}')`)
+		.join(',\n')
 
-  chunks.push(`INSERT INTO hadiths (narrator, number, arab, translation) VALUES\n${values};\n`)
+	chunks.push(`INSERT INTO hadiths (narrator, number, arab, translation) VALUES\n${values};\n`)
 }
 
 const outputPath = resolve(process.cwd(), 'seed.sql')
