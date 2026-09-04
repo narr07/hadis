@@ -1,8 +1,7 @@
-import { getNarrators } from '../utils/hadiths'
+import { NARRATORS } from '~~/shared/constants/narrators'
 
 export default defineEventHandler(() => {
-	const narrators = getNarrators()
 	return {
-		narrators
+		narrators: NARRATORS
 	}
 })

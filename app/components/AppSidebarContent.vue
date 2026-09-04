@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Narrator } from '~~/server/utils/hadiths'
+import { NARRATORS } from '~~/shared/constants/narrators'
 
 defineProps<{
 	mobile?: boolean
@@ -12,10 +12,7 @@ const emit = defineEmits<{
 const { narrator, viewMode, updateFilters, resetFilters, searchQuery, numberQuery } = useHadithFilters()
 const { bookmarks } = useBookmarks()
 
-const { data: narratorsData } = await useFetch<{ narrators: Narrator[] }>(
-	'/api/narrators'
-)
-const narrators = computed(() => narratorsData.value?.narrators ?? [])
+const narrators = NARRATORS
 
 const hasActiveFilters = computed(() =>
 	narrator.value !== 'bukhari' || Boolean(searchQuery.value) || Boolean(numberQuery.value) || viewMode.value !== 'all'

@@ -1,69 +1,36 @@
-import { readFileSync, existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { NARRATORS } from '~~/shared/constants/narrators'
+import type { HadithItem, HadithPageResponse, HadithWithNarrator, Narrator } from '~~/shared/types/hadith'
 
-export interface Narrator {
-	name: string
-	slug: string
-	total: number
-}
-
-export interface HadithItem {
-	number: number
-	arab: string
-	id: string
-}
-
-export interface HadithWithNarrator extends HadithItem {
-	narratorSlug: string
-	narratorName: string
-}
-
-export interface HadithPageResponse {
-	narrator?: Narrator | null
-	total: number
-	page: number
-	limit: number
-	totalPages: number
-	hasNext: boolean
-	hasPrev: boolean
-	items: HadithWithNarrator[]
-}
-
-const narratorsCache: Narrator[] = []
 const hadithsCache = new Map<string, HadithItem[]>()
 
-function getDataDir(): string {
-	const currentDir = process.cwd()
-	const serverDataDir = resolve(currentDir, 'server/data/hadiths')
-	if (existsSync(serverDataDir)) {
-		return serverDataDir
+function getDataDir(): string | null {
+	try {
+		if (typeof process === 'undefined' || !process.cwd) {
+			return null
+		}
+		const currentDir = process.cwd()
+		const publicDataDir = resolve(currentDir, 'public/data/hadiths')
+		if (existsSync(publicDataDir)) {
+			return publicDataDir
+		}
+		const serverDataDir = resolve(currentDir, 'server/data/hadiths')
+		if (existsSync(serverDataDir)) {
+			return serverDataDir
+		}
+	} catch {
+		// Environment without node:fs (e.g. edge worker)
 	}
-	// Fallback during dev or build if path differs
-	return resolve(currentDir, '.output/server/data/hadiths')
+	return null
 }
 
-export function getNarrators(): Narrator[] {
-	if (narratorsCache.length > 0) {
-		return narratorsCache
-	}
-
-	try {
-		const listPath = resolve(getDataDir(), 'list.json')
-		if (existsSync(listPath)) {
-			const data = JSON.parse(readFileSync(listPath, 'utf-8')) as Narrator[]
-			narratorsCache.push(...data)
-			return narratorsCache
-		}
-	} catch (err) {
-		console.error('Failed to load narrators list.json:', err)
-	}
-
-	return []
+export function getNarrators(): readonly Narrator[] {
+	return NARRATORS
 }
 
 export function getNarrator(slug: string): Narrator | undefined {
-	const narrators = getNarrators()
-	return narrators.find(n => n.slug === slug)
+	return NARRATORS.find(n => n.slug === slug)
 }
 
 export function getHadithsForNarrator(slug: string): HadithItem[] {
@@ -72,15 +39,18 @@ export function getHadithsForNarrator(slug: string): HadithItem[] {
 	}
 
 	try {
-		const filePath = resolve(getDataDir(), `${slug}.json`)
-		if (existsSync(filePath)) {
-			const fileContent = readFileSync(filePath, 'utf-8')
-			const items = JSON.parse(fileContent) as HadithItem[]
-			hadithsCache.set(slug, items)
-			return items
+		const dataDir = getDataDir()
+		if (dataDir) {
+			const filePath = resolve(dataDir, `${slug}.json`)
+			if (existsSync(filePath)) {
+				const fileContent = readFileSync(filePath, 'utf-8')
+				const items = JSON.parse(fileContent) as HadithItem[]
+				hadithsCache.set(slug, items)
+				return items
+			}
 		}
 	} catch (err) {
-		console.error(`Failed to load hadith file for ${slug}:`, err)
+		console.warn(`Could not load local filesystem hadiths for ${slug}:`, err)
 	}
 
 	return []
@@ -114,7 +84,6 @@ export function queryHadiths(params: QueryHadithsParams): HadithPageResponse {
 			narratorName: activeNarrator.name
 		}))
 	} else {
-		// When "all" or not specified, we can load either all narrators or Bukhari by default if no query
 		if (searchQuery) {
 			for (const narr of narrators) {
 				const list = getHadithsForNarrator(narr.slug)
@@ -127,8 +96,7 @@ export function queryHadiths(params: QueryHadithsParams): HadithPageResponse {
 				}
 			}
 		} else {
-			// Default to first narrator (bukhari) if pool is empty
-			const defaultNarr = narrators[0] || { name: 'Bukhari', slug: 'bukhari', total: 6638 }
+			const defaultNarr = narrators[0]
 			const list = getHadithsForNarrator(defaultNarr.slug)
 			pool = list.map(item => ({
 				...item,
@@ -143,7 +111,6 @@ export function queryHadiths(params: QueryHadithsParams): HadithPageResponse {
 	if (targetNumber) {
 		filtered = filtered.filter(h => h.number === targetNumber)
 	} else if (searchQuery) {
-		// Check if search query is purely a number
 		const numSearch = Number(searchQuery.replace(/^#/, ''))
 		if (!isNaN(numSearch) && numSearch > 0) {
 			filtered = filtered.filter(

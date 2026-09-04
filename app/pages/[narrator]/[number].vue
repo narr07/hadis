@@ -1,24 +1,43 @@
 <script setup lang="ts">
-import type { Narrator } from '~~/server/utils/hadiths'
-
-interface HadithDetailResponse {
-	number: number
-	arab: string
-	id: string
-	narrator: Narrator
-	prevNumber: number | null
-	nextNumber: number | null
-}
+import type { HadithDetailData } from '~~/app/composables/useHadithData'
 
 const route = useRoute()
 const toast = useToast()
 const { isBookmarked, toggleBookmark } = useBookmarks()
+const { getHadithDetail } = useHadithData()
 
 const narratorSlug = computed(() => route.params.narrator as string)
 const hadithNumber = computed(() => Number(route.params.number))
 
-const { data: hadith, error } = await useFetch<HadithDetailResponse>(
-	() => `/api/hadiths/${narratorSlug.value}/${hadithNumber.value}`
+const hadith = ref<HadithDetailData | null>(null)
+const error = ref(false)
+const isPending = ref(true)
+
+async function loadDetail() {
+	isPending.value = true
+	error.value = false
+	try {
+		const item = await getHadithDetail(narratorSlug.value, hadithNumber.value)
+		if (!item) {
+			error.value = true
+			hadith.value = null
+		} else {
+			hadith.value = item
+		}
+	} catch {
+		error.value = true
+		hadith.value = null
+	} finally {
+		isPending.value = false
+	}
+}
+
+watch(
+	[narratorSlug, hadithNumber],
+	() => {
+		loadDetail()
+	},
+	{ immediate: true }
 )
 
 const arabicFontSize = ref<number>(28)
@@ -117,7 +136,29 @@ useHead({
 		class="container mx-auto px-4 py-8 max-w-4xl"
 	>
 		<div
-			v-if="error"
+			v-if="isPending"
+			class="p-8 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-200 dark:border-neutral-800 flex flex-col gap-6 animate-pulse"
+		>
+			<div
+				class="flex justify-between"
+			>
+				<div
+					class="h-6 w-32 bg-neutral-200 dark:bg-neutral-800 rounded-md"
+				/>
+				<div
+					class="h-6 w-20 bg-neutral-200 dark:bg-neutral-800 rounded-md"
+				/>
+			</div>
+			<div
+				class="h-28 bg-neutral-200 dark:bg-neutral-800 rounded-md"
+			/>
+			<div
+				class="h-16 bg-neutral-200 dark:bg-neutral-800 rounded-md"
+			/>
+		</div>
+
+		<div
+			v-else-if="error"
 			class="p-10 text-center bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 flex flex-col items-center gap-4"
 		>
 			<UIcon
