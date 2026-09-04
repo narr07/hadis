@@ -29,28 +29,32 @@ watch(
 	}
 )
 
-function onSearchInput(val: string) {
+function onSearchInput(val: unknown) {
 	clearTimeout(searchTimer)
 	searchTimer = setTimeout(() => {
-		updateFilters({ q: val.trim() }, { replace: true })
+		const str = val !== null && val !== undefined ? String(val).trim() : ''
+		updateFilters({ q: str }, { replace: true })
 	}, 280)
 }
 
-function onNumberInput(val: string) {
+function onNumberInput(val: unknown) {
 	clearTimeout(numberTimer)
 	numberTimer = setTimeout(() => {
-		updateFilters({ no: val.trim() }, { replace: true })
+		const str = val !== null && val !== undefined ? String(val).trim() : ''
+		updateFilters({ no: str }, { replace: true })
 	}, 250)
 }
 
 function handleSearch() {
 	clearTimeout(searchTimer)
-	updateFilters({ q: localSearch.value.trim() }, { replace: true })
+	const str = localSearch.value !== null && localSearch.value !== undefined ? String(localSearch.value).trim() : ''
+	updateFilters({ q: str }, { replace: true })
 }
 
 function handleNumber() {
 	clearTimeout(numberTimer)
-	updateFilters({ no: localNumber.value.trim() }, { replace: true })
+	const str = localNumber.value !== null && localNumber.value !== undefined ? String(localNumber.value).trim() : ''
+	updateFilters({ no: str }, { replace: true })
 }
 
 function clearSearch() {

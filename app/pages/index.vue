@@ -27,6 +27,7 @@ const hadithsRequest = useFetch<HadithPageResponse>('/api/hadiths', {
 	dedupe: 'cancel',
 	lazy: true,
 	query: apiQuery,
+	watch: [apiQuery],
 	server: false
 })
 
@@ -34,6 +35,7 @@ const countRequest = useFetch<{ total: number }>('/api/hadiths/count', {
 	dedupe: 'cancel',
 	lazy: true,
 	query: countQuery,
+	watch: [countQuery],
 	server: false
 })
 
