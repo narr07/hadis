@@ -1,0 +1,12 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hadis",
+	"compatibility_flags": ["nodejs_compat"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "hadis-db",
+			"database_id": "1bd25a59-10c2-43ee-8025-bea27a321d1e"
+		}
+	]
+}

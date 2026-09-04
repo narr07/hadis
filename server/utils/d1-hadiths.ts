@@ -37,37 +37,49 @@ export async function queryHadithsFromDb(params: HadithsQueryFilter) {
 	const whereClause = and(...conditions)
 	const offset = (page - 1) * limit
 
-	const rows = await db
-		.select({
-			id: schema.hadiths.id,
-			number: schema.hadiths.number,
-			arab: schema.hadiths.arab,
-			translation: schema.hadiths.translation
-		})
-		.from(schema.hadiths)
-		.where(whereClause)
-		.orderBy(schema.hadiths.number)
-		.limit(limit + 1)
-		.offset(offset)
+	try {
+		const rows = await db
+			.select({
+				id: schema.hadiths.id,
+				number: schema.hadiths.number,
+				arab: schema.hadiths.arab,
+				translation: schema.hadiths.translation
+			})
+			.from(schema.hadiths)
+			.where(whereClause)
+			.orderBy(schema.hadiths.number)
+			.limit(limit + 1)
+			.offset(offset)
 
-	const hasNext = rows.length > limit
-	const pageItems = rows.slice(0, limit)
+		const hasNext = rows.length > limit
+		const pageItems = rows.slice(0, limit)
 
-	const items: HadithWithNarrator[] = pageItems.map(r => ({
-		number: r.number,
-		arab: r.arab,
-		id: r.translation,
-		narratorSlug: activeNarrator.slug,
-		narratorName: activeNarrator.name
-	}))
+		const items: HadithWithNarrator[] = pageItems.map(r => ({
+			number: r.number,
+			arab: r.arab,
+			id: r.translation,
+			narratorSlug: activeNarrator.slug,
+			narratorName: activeNarrator.name
+		}))
 
-	return {
-		narrator: activeNarrator,
-		page,
-		limit,
-		hasNext,
-		hasPrev: page > 1,
-		items
+		return {
+			narrator: activeNarrator,
+			page,
+			limit,
+			hasNext,
+			hasPrev: page > 1,
+			items
+		}
+	} catch (err) {
+		console.error('Error querying hadiths from D1:', err)
+		return {
+			narrator: activeNarrator,
+			page,
+			limit,
+			hasNext: false,
+			hasPrev: false,
+			items: []
+		}
 	}
 }
 
@@ -97,8 +109,13 @@ export async function countHadithsFromDb(params: HadithsQueryFilter): Promise<nu
 	}
 
 	const whereClause = and(...conditions)
-	const [result] = await db.select({ total: count() }).from(schema.hadiths).where(whereClause)
-	return result?.total ?? 0
+	try {
+		const [result] = await db.select({ total: count() }).from(schema.hadiths).where(whereClause)
+		return result?.total ?? activeNarrator.total
+	} catch (err) {
+		console.error('Error counting hadiths from D1:', err)
+		return activeNarrator.total
+	}
 }
 
 export async function getHadithDetailFromDb(narratorSlug: string, number: number) {
