@@ -20,7 +20,6 @@ function escapeSql(str: string): string {
 	return str.replace(/'/g, '\'\'')
 }
 
-const batchSize = 100
 const chunks: string[] = []
 
 chunks.push(`-- Kutubut Tis'ah D1 Schema and Seed Data
@@ -35,13 +34,8 @@ CREATE INDEX IF NOT EXISTS narrator_idx ON hadiths (narrator);
 CREATE INDEX IF NOT EXISTS narrator_number_idx ON hadiths (narrator, number);
 `)
 
-for (let i = 0; i < rows.length; i += batchSize) {
-	const slice = rows.slice(i, i + batchSize)
-	const values = slice
-		.map(r => `('${escapeSql(r.narrator)}', ${r.number}, '${escapeSql(r.arab)}', '${escapeSql(r.translation)}')`)
-		.join(',\n')
-
-	chunks.push(`INSERT INTO hadiths (narrator, number, arab, translation) VALUES\n${values};\n`)
+for (const r of rows) {
+	chunks.push(`INSERT INTO hadiths (narrator, number, arab, translation) VALUES ('${escapeSql(r.narrator)}', ${r.number}, '${escapeSql(r.arab)}', '${escapeSql(r.translation)}');`)
 }
 
 const outputPath = resolve(process.cwd(), 'seed.sql')
