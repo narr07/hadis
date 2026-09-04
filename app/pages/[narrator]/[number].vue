@@ -1,44 +1,31 @@
 <script setup lang="ts">
-import type { HadithDetailData } from '~~/app/composables/useHadithData'
+import type { Narrator } from '~~/shared/types/hadith'
+
+interface HadithDetailResponse {
+	number: number
+	arab: string
+	id: string
+	narrator: Narrator
+	prevNumber: number | null
+	nextNumber: number | null
+}
 
 const route = useRoute()
 const toast = useToast()
 const { isBookmarked, toggleBookmark } = useBookmarks()
-const { getHadithDetail } = useHadithData()
 
 const narratorSlug = computed(() => route.params.narrator as string)
 const hadithNumber = computed(() => Number(route.params.number))
 
-const hadith = ref<HadithDetailData | null>(null)
-const error = ref(false)
-const isPending = ref(true)
-
-async function loadDetail() {
-	isPending.value = true
-	error.value = false
-	try {
-		const item = await getHadithDetail(narratorSlug.value, hadithNumber.value)
-		if (!item) {
-			error.value = true
-			hadith.value = null
-		} else {
-			hadith.value = item
-		}
-	} catch {
-		error.value = true
-		hadith.value = null
-	} finally {
-		isPending.value = false
+const { data: hadith, error, status } = await useFetch<HadithDetailResponse>(
+	() => `/api/hadiths/${narratorSlug.value}/${hadithNumber.value}`,
+	{
+		lazy: true,
+		server: false
 	}
-}
-
-watch(
-	[narratorSlug, hadithNumber],
-	() => {
-		loadDetail()
-	},
-	{ immediate: true }
 )
+
+const isPending = computed(() => status.value === 'pending')
 
 const arabicFontSize = ref<number>(28)
 function decreaseFontSize() {

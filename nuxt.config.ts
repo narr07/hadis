@@ -1,6 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
 	modules: [
+		'@nuxthub/core',
 		'@nuxt/eslint',
 		'@nuxt/ui'
 	],
@@ -35,6 +36,11 @@ export default defineNuxtConfig({
 	css: ['~/assets/css/main.css'],
 
 	compatibilityDate: '2026-06-30',
+
+	hub: {
+		db: 'sqlite',
+		cache: true
+	},
 
 	eslint: {
 		config: {

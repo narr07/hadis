@@ -8,17 +8,23 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "typecheck": "nuxt typecheck"
+    "typecheck": "nuxt typecheck",
+    "db:seed": "bun run scripts/seed-db.ts",
+    "db:export": "bun run scripts/export-seed-sql.ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.127",
     "@iconify-json/simple-icons": "^1.2.94",
     "@nuxt/ui": "^4.11.0",
+    "@nuxthub/core": "^0.10.8",
+    "drizzle-orm": "^0.45.2",
     "nuxt": "^4.5.2",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
+    "@libsql/client": "^0.18.0",
     "@nuxt/eslint": "^1.17.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.9.1",
     "typescript": "^6.0.3",
     "vue-tsc": "^3.3.11"

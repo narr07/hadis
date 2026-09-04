@@ -1,94 +1,46 @@
 <script setup lang="ts">
 import { NARRATORS, findNarrator } from '~~/shared/constants/narrators'
-import type { HadithItem, HadithWithNarrator } from '~~/shared/types/hadith'
+import type { HadithPageResponse, HadithWithNarrator } from '~~/shared/types/hadith'
 
 const { narrator, searchQuery, numberQuery, viewMode, page, updateFilters, resetFilters } = useHadithFilters()
 const { bookmarks } = useBookmarks()
-const { loadNarratorHadiths } = useHadithData()
 
 const currentNarratorObj = computed(() =>
 	findNarrator(narrator.value) || NARRATORS[0]
 )
 
-const rawHadiths = ref<HadithItem[]>([])
-const isPending = ref(true)
-const loadError = ref<Error | null>(null)
+const apiQuery = computed(() => ({
+	narrator: narrator.value,
+	search: searchQuery.value || undefined,
+	number: numberQuery.value ? Number(numberQuery.value) : undefined,
+	page: page.value,
+	limit: 15
+}))
 
-async function fetchCurrentData() {
-	if (viewMode.value === 'bookmarks') {
-		isPending.value = false
-		return
-	}
+const countQuery = computed(() => ({
+	narrator: narrator.value,
+	search: searchQuery.value || undefined,
+	number: numberQuery.value ? Number(numberQuery.value) : undefined
+}))
 
-	isPending.value = true
-	loadError.value = null
-
-	try {
-		const targetSlug = currentNarratorObj.value.slug
-		const data = await loadNarratorHadiths(targetSlug)
-		rawHadiths.value = data
-	} catch (err: unknown) {
-		loadError.value = err instanceof Error ? err : new Error('Gagal memuat hadits')
-	} finally {
-		isPending.value = false
-	}
-}
-
-watch(
-	() => narrator.value,
-	() => {
-		fetchCurrentData()
-	},
-	{ immediate: true }
-)
-
-const status = computed(() => (isPending.value ? 'pending' : loadError.value ? 'error' : 'success'))
-const error = computed(() => loadError.value)
-const refresh = fetchCurrentData
-
-const filteredHadiths = computed<HadithWithNarrator[]>(() => {
-	const currentNarrator = currentNarratorObj.value
-	const list = rawHadiths.value
-
-	if (numberQuery.value) {
-		const target = Number(numberQuery.value)
-		return list
-			.filter(h => h.number === target)
-			.map(h => ({
-				...h,
-				narratorSlug: currentNarrator.slug,
-				narratorName: currentNarrator.name
-			}))
-	}
-
-	if (searchQuery.value) {
-		const q = searchQuery.value.trim().toLowerCase()
-		const numSearch = Number(q.replace(/^#/, ''))
-		if (!isNaN(numSearch) && numSearch > 0) {
-			return list
-				.filter(h => h.number === numSearch || h.id.toLowerCase().includes(q))
-				.map(h => ({
-					...h,
-					narratorSlug: currentNarrator.slug,
-					narratorName: currentNarrator.name
-				}))
-		}
-
-		return list
-			.filter(h => h.id.toLowerCase().includes(q))
-			.map(h => ({
-				...h,
-				narratorSlug: currentNarrator.slug,
-				narratorName: currentNarrator.name
-			}))
-	}
-
-	return list.map(h => ({
-		...h,
-		narratorSlug: currentNarrator.slug,
-		narratorName: currentNarrator.name
-	}))
+const hadithsRequest = useFetch<HadithPageResponse>('/api/hadiths', {
+	dedupe: 'cancel',
+	lazy: true,
+	query: apiQuery,
+	server: false
 })
+
+const countRequest = useFetch<{ total: number }>('/api/hadiths/count', {
+	dedupe: 'cancel',
+	lazy: true,
+	query: countQuery,
+	server: false
+})
+
+const [{ data: hadithsData, status, error, refresh }, { data: countData }] = await Promise.all([
+	hadithsRequest,
+	countRequest
+])
 
 const filteredBookmarks = computed<HadithWithNarrator[]>(() => {
 	let list = bookmarks.value.map(b => ({
@@ -113,28 +65,34 @@ const filteredBookmarks = computed<HadithWithNarrator[]>(() => {
 })
 
 const displayedHadiths = computed<HadithWithNarrator[]>(() => {
-	const start = (page.value - 1) * 15
 	if (viewMode.value === 'bookmarks') {
+		const start = (page.value - 1) * 15
 		return filteredBookmarks.value.slice(start, start + 15)
 	}
-	return filteredHadiths.value.slice(start, start + 15)
+	return hadithsData.value?.items ?? []
 })
 
 const totalItems = computed(() => {
 	if (viewMode.value === 'bookmarks') {
 		return filteredBookmarks.value.length
 	}
-	return filteredHadiths.value.length
+	return countData.value?.total ?? currentNarratorObj.value.total
 })
 
 const totalPages = computed(() => {
 	if (viewMode.value === 'bookmarks') {
 		return Math.ceil(filteredBookmarks.value.length / 15) || 1
 	}
-	return Math.ceil(filteredHadiths.value.length / 15) || 1
+	return Math.ceil(totalItems.value / 15) || 1
 })
 
-const hasNext = computed(() => page.value < totalPages.value)
+const hasNext = computed(() => {
+	if (viewMode.value === 'bookmarks') {
+		return page.value < totalPages.value
+	}
+	return hadithsData.value?.hasNext ?? page.value < totalPages.value
+})
+
 const hasPrev = computed(() => page.value > 1)
 
 useHead({

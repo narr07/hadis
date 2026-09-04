@@ -27,3 +27,6 @@ logs
 hadis-api-id-main/
 nuxt-books-main/
 
+# Seed SQL dump
+seed.sql
+

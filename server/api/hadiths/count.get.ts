@@ -1,4 +1,4 @@
-import { queryHadithsFromDb } from '../../utils/d1-hadiths'
+import { countHadithsFromDb } from '../../utils/d1-hadiths'
 
 export default defineCachedEventHandler(
 	async (event) => {
@@ -6,25 +6,23 @@ export default defineCachedEventHandler(
 
 		const narrator = query.narrator ? String(query.narrator) : 'bukhari'
 		const search = query.search ? String(query.search) : undefined
-		const page = query.page ? Number(query.page) : 1
-		const limit = query.limit ? Number(query.limit) : 15
 		const number = query.number ? Number(query.number) : undefined
 
-		return queryHadithsFromDb({
+		const total = await countHadithsFromDb({
 			narrator,
 			search,
-			page,
-			limit,
 			number
 		})
+
+		return { total }
 	},
 	{
 		getKey: (event) => {
 			const q = getQuery(event)
-			return `hadiths-${q.narrator || 'bukhari'}-${q.page || 1}-${q.limit || 15}-${q.search || ''}-${q.number || ''}`
+			return `hadiths-count-${q.narrator || 'bukhari'}-${q.search || ''}-${q.number || ''}`
 		},
 		maxAge: 60 * 60,
-		name: 'hadiths-page',
+		name: 'hadiths-count',
 		swr: true
 	}
 )

@@ -1,6 +1,6 @@
-import { getHadithDetail } from '../../../utils/hadiths'
+import { getHadithDetailFromDb } from '../../../utils/d1-hadiths'
 
-export default defineEventHandler((event) => {
+export default defineEventHandler(async (event) => {
 	const narrator = getRouterParam(event, 'narrator')
 	const numberParam = getRouterParam(event, 'number')
 
@@ -19,7 +19,7 @@ export default defineEventHandler((event) => {
 		})
 	}
 
-	const hadith = getHadithDetail(narrator, hadithNumber)
+	const hadith = await getHadithDetailFromDb(narrator, hadithNumber)
 	if (!hadith) {
 		throw createError({
 			statusCode: 404,
